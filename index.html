@@ -141,7 +141,7 @@ const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt
 
 let friends = [], cfg = {proxy: '', names: 'ru', trash: [], groups: [], view: 'fr', off: [], sort: 'avg', psize: '100', trashMode: 'in'};
 // ---- Supabase: сюда вставьте Project URL и публичный ключ (anon / publishable) ----
-const SB_URL = '', SB_KEY = '';
+const SB_URL = 'https://ybiatdofcxacxitbitbv.supabase.co', SB_KEY = 'sb_publishable_Bp_Ncxwn3YhSA12A2CeFxA_nhpnhRxb';
 const SB = !!(SB_URL && SB_KEY);
 let EDIT = !SB, PASS = '', sharedEmpty = false, pushT;
 const sbBase = SB_URL.replace(/\/+$/, '') + '/rest/v1/';
