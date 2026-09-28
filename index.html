@@ -1,0 +1,504 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Что думают друзья</title>
+<style>
+:root{--bg:#eef0f6;--card:#fff;--ink:#1b2340;--mute:#6a7391;--line:#d9ddea;--acc:#3b5bfd}
+@media (prefers-color-scheme:dark){:root{--bg:#141829;--card:#1d2238;--ink:#e8ebf7;--mute:#8d96b8;--line:#2e3555;--acc:#7b93ff}}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.45 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
+main{max-width:860px;margin:0 auto;padding:28px 16px 60px}
+h1{font-size:clamp(28px,6vw,44px);line-height:1.05;margin:0 0 6px;letter-spacing:-.02em}
+.sub{color:var(--mute);margin:0 0 22px}
+.panel{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:14px}
+.row{display:grid;grid-template-columns:1fr 1fr 78px;gap:8px;margin-bottom:8px}
+.hd{color:var(--mute);font-size:13px;margin-bottom:4px}
+input,select,button{font:inherit;color:inherit;background:var(--bg);border:1px solid var(--line);border-radius:8px;padding:8px 10px;min-width:0}
+input:focus-visible,select:focus-visible,button:focus-visible,summary:focus-visible{outline:2px solid var(--acc);outline-offset:1px}
+button{cursor:pointer}
+button.main-btn{background:var(--acc);border-color:var(--acc);color:#fff;font-weight:600}
+.acts{display:flex;gap:8px;margin-top:6px;flex-wrap:wrap}
+#status{margin:14px 0;color:var(--mute);font-size:14px;white-space:pre-line}
+.err{color:#d6455d}
+.ctl{display:flex;gap:10px;flex-wrap:wrap;align-items:end;margin:18px 0 12px}
+.ctl label{display:flex;flex-direction:column;font-size:13px;color:var(--mute);gap:4px}
+.ctl input[type=number]{width:80px}
+.ctl input[type=search]{width:220px;max-width:100%}
+details{background:var(--card);border:1px solid var(--line);border-radius:12px;margin-bottom:8px}
+summary{list-style:none;display:grid;grid-template-columns:28px 48px 1fr auto;gap:12px;align-items:center;padding:8px 12px 8px 8px;cursor:pointer}
+summary::-webkit-details-marker{display:none}
+summary img{width:48px;height:68px;object-fit:cover;border-radius:6px;background:var(--line)}
+.t{font-weight:600;overflow-wrap:anywhere}
+.t small{display:block;font-weight:400;color:var(--mute)}
+.sc{text-align:right;min-width:64px}
+.sc b{font-size:30px;line-height:1;font-variant-numeric:tabular-nums;letter-spacing:-.02em}
+.sc span{display:block;font-size:12px;color:var(--mute)}
+.who{display:flex;flex-wrap:wrap;gap:6px;padding:4px 12px 12px}
+.chip{border:1px solid var(--line);border-radius:999px;padding:3px 10px;font-size:14px}
+.chip b{margin-left:6px;font-variant-numeric:tabular-nums}
+.item.tr>details{opacity:.72}
+.tag{display:inline-block;margin-left:8px;padding:0 7px;border:1px solid #d6455d;border-radius:999px;color:#d6455d;font-size:11px;font-weight:600;vertical-align:middle}
+.part.tr .nm{text-decoration:line-through;opacity:.7}
+.fsc{padding:0 12px 8px;font-size:14px;color:var(--mute)}
+.part select{padding:2px 6px;font-size:12px;max-width:170px}
+.acts2 select{max-width:220px}
+.empty{color:var(--mute);text-align:center;padding:30px 0}
+.rk{color:var(--mute);font-size:14px;text-align:right;font-variant-numeric:tabular-nums}
+.item.pk{display:grid;grid-template-columns:auto 1fr;gap:8px;align-items:start}
+.item.pk .pick{padding-top:34px}
+.parts{padding:0 12px 6px}
+.part{display:flex;align-items:center;gap:8px;padding:4px 0;border-top:1px solid var(--line);font-size:14px}
+.part span:first-child{flex:1;overflow-wrap:anywhere}
+.part .s{color:var(--mute)}
+.acts2{padding:0 12px 12px;display:flex;gap:8px;flex-wrap:wrap}
+#mbar{margin-bottom:12px}
+.pager{display:flex;gap:10px;align-items:center;justify-content:center;margin:10px 0}
+.pager:empty{display:none}
+.part button{padding:2px 8px;font-size:12px}
+.inc{display:flex;align-items:center;justify-content:center}
+.inc input{width:20px;height:20px;padding:0}
+@media (max-width:520px){.row{grid-template-columns:1fr 1fr 78px}}
+</style>
+</head>
+<body>
+<main>
+<h1>Что думают друзья</h1>
+<p class="sub">Средняя оценка аниме по профилям друзей. Если указан AniList, берём его, иначе Shikimori.</p>
+
+<section class="panel">
+  <div class="row"><div class="hd">AniList</div><div class="hd">Shikimori</div><div class="hd">Учитывать</div></div>
+  <div id="friends"></div>
+  <div class="acts">
+    <button id="go" type="button" class="main-btn">Посчитать</button>
+  </div>
+</section>
+
+<div id="ebar" class="panel" hidden style="margin-top:14px">
+  <div class="hd">Режим редактирования. Шлак, франшизы и список друзей хранятся у вас в браузере, пока вы не скачаете обновлённый файл и не выложите его вместо старого — тогда их увидят все.</div>
+  <div class="acts">
+    <button id="dl" type="button" class="main-btn">Скачать обновлённый файл</button>
+    <button id="reset" type="button">Сбросить мои правки</button>
+  </div>
+  <div id="emsg" class="hd" style="margin-top:6px"></div>
+</div>
+
+<div id="status" role="status"></div>
+
+<div class="ctl" id="ctl" hidden>
+  <label>Поиск<input id="q" type="search" placeholder="Название"></label>
+  <label>Минимум оценок<input id="min" type="number" min="1" value="2"></label>
+  <label>Названия
+    <select id="names">
+      <option value="ru">Русские (как на Шикимори)</option>
+      <option value="ro">Ромадзи (как на MAL)</option>
+      <option value="en">English</option>
+    </select>
+  </label>
+  <label>Сортировка
+    <select id="sort">
+      <option value="avg">Средняя оценка (сначала лучшие)</option>
+      <option value="worst">Средняя оценка (сначала худшие)</option>
+      <option value="low">Самая низкая оценка друга</option>
+      <option value="cnt">Число оценок</option>
+      <option value="spread">Споры (разброс)</option>
+      <option value="name">Название</option>
+    </select>
+  </label>
+  <label>Франшизы
+    <select id="view">
+      <option value="fr">Объединены</option>
+      <option value="all">Все сезоны отдельно</option>
+    </select>
+  </label>
+  <label>Шлак
+    <select id="trash">
+      <option value="in">С шлаком (с пометкой)</option>
+      <option value="out">Без шлака</option>
+      <option value="only">Только шлак</option>
+    </select>
+  </label>
+  <label>На странице
+    <select id="psize"><option>50</option><option selected>100</option><option>300</option></select>
+  </label>
+  <button id="mtoggle" type="button">Объединить франшизу</button>
+</div>
+<div id="mbar" class="panel" hidden>
+  <div class="hd">Отметьте галочками все части франшизы (сезоны, фильмы, целые франшизы) и нажмите «Объединить». Отдельную часть можно добавить в ещё одну франшизу кнопкой «+ во франшизу». Оценки одного друга по частям усредняются, так что франшиза считается одним тайтлом.</div>
+  <div class="acts">
+    <input id="mname" placeholder="Название франшизы (по умолчанию как у первой отмеченной)" style="flex:1;min-width:200px">
+    <button id="mdo" type="button" class="main-btn">Объединить (<span id="mcount">0</span>)</button>
+  </div>
+  <label class="hd" style="display:block;margin-top:6px"><input id="mkeep" type="checkbox" checked> Оставить выбранные франшизы как есть (их части окажутся сразу в нескольких франшизах)</label>
+  <div id="mmsg" class="hd"></div>
+</div>
+<div id="pg1" class="pager"></div>
+<div id="list"></div>
+<div id="pg2" class="pager"></div>
+</main>
+
+<script id="saved" type="application/json">{"friends": [{"al": "Coffa", "sh": ""}, {"al": "", "sh": "https://shikimori.io/Toxexex"}, {"al": "PesKoshachy", "sh": ""}, {"al": "Egortos", "sh": ""}, {"al": "Holdes", "sh": ""}, {"al": "", "sh": "https://shikimori.rip/DakuKun"}, {"al": "", "sh": "https://shikimori.io/skltn"}, {"al": "", "sh": "https://shikimori.io/Тим+Ховард"}], "proxy": "", "names": "ru", "trash": [], "groups": [], "view": "fr"}</script>
+<script>
+const $ = s => document.querySelector(s);
+const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+
+let friends = [], cfg = {proxy: '', names: 'ru', trash: [], groups: [], view: 'fr', off: [], sort: 'avg', psize: '100', trashMode: 'in'};
+const EDIT = location.hash === '#edit';
+(function loadCfg() {
+  let F = null, V = null, D = null;
+  try { F = JSON.parse($('#saved').textContent); } catch (e) {}
+  try { V = JSON.parse(localStorage.getItem('fr-view')); } catch (e) {}
+  F = F || {}; V = V || {};
+  if (EDIT) {
+    try { D = JSON.parse(localStorage.getItem('fr-draft')); } catch (e) {}
+    if (!D) { // подхватываем то, что было наделано в старой версии страницы
+      let L = null; try { L = JSON.parse(localStorage.getItem('fr-cfg')); } catch (e) {}
+      if (L && ((L.groups || []).length || (L.trash || []).length || (L.hidden || []).length))
+        D = {friends: F.friends, proxy: F.proxy, groups: L.groups || [], trash: (L.trash || []).concat((L.hidden || []).map(h => 'k:' + h.k))};
+    }
+  }
+  const S = D || F; // у обычных посетителей источник один — сам файл
+  friends = (S.friends || []).map(f => ({al: f.al || '', sh: f.sh || ''}));
+  cfg.trash = [...(S.trash || [])]; cfg.groups = (S.groups || []).map(g => ({...g, keys: [...g.keys]})); cfg.proxy = S.proxy || '';
+  cfg.names = V.names || F.names || 'ru'; cfg.view = V.view || F.view || 'fr';
+  cfg.off = V.off || []; cfg.sort = V.sort || 'avg'; cfg.psize = V.psize || '100'; cfg.trashMode = V.trashMode || 'in';
+  if (!friends.length) friends = [{al:'', sh:''}, {al:'', sh:''}];
+})();
+
+const snapshot = () => JSON.stringify({friends: friends.filter(f => f.al.trim() || f.sh.trim()), proxy: cfg.proxy, trash: cfg.trash, groups: cfg.groups});
+
+function saveView() {
+  try { localStorage.setItem('fr-view', JSON.stringify({names: cfg.names, view: cfg.view, sort: $('#sort').value, psize: $('#psize').value, trashMode: cfg.trashMode, off: cfg.off})); } catch (e) {}
+}
+
+function save() {
+  if (!EDIT) return; // посетители ничего не сохраняют: общие данные берутся из файла
+  try { localStorage.setItem('fr-draft', snapshot()); } catch (e) {}
+}
+
+$('#dl').onclick = async () => {
+  const j = snapshot().replace(/</g, '\\u003c'), re = /(<script id="saved" type="application\/json">)[\s\S]*?(<\/script>)/, msg = $('#emsg');
+  try {
+    const r = await fetch(location.href.split('#')[0], {cache: 'no-store'});
+    if (!r.ok) throw new Error('HTTP ' + r.status);
+    const txt = await r.text();
+    if (!re.test(txt)) throw new Error('нет блока данных');
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(new Blob([txt.replace(re, (_, x, y) => x + j + y)], {type: 'text/html'}));
+    a.download = decodeURIComponent(location.pathname.split('/').pop()) || 'index.html';
+    document.body.appendChild(a); a.click(); a.remove();
+    msg.textContent = 'Файл скачан. Замените им старый файл в репозитории и закоммитьте.';
+  } catch (e) { // страница открыта с диска: браузер не даёт прочитать собственный файл
+    try { await navigator.clipboard.writeText(j); msg.textContent = 'Файл с диска прочитать нельзя, поэтому данные скопированы в буфер. Откройте файл в редакторе и замените ими содержимое блока с id="saved" (там лежит JSON). Проще открыть страницу с сайта и нажать кнопку там.'; }
+    catch (e2) { msg.textContent = 'Не получилось скачать: ' + e.message; }
+  }
+};
+$('#reset').onclick = () => {
+  if (!confirm('Сбросить все правки в этом браузере и вернуть данные из файла?')) return;
+  try { localStorage.removeItem('fr-draft'); } catch (e) {}
+  location.reload();
+};
+if (EDIT) $('#ebar').hidden = false; else $('#mtoggle').hidden = true;
+
+function drawFriends() {
+  $('#friends').innerHTML = friends.map((f, i) => `
+    <div class="row">
+      <input data-i="${i}" data-k="al" value="${esc(f.al)}" placeholder="ник" aria-label="AniList, друг ${i+1}">
+      <input data-i="${i}" data-k="sh" value="${esc(f.sh)}" placeholder="ник" aria-label="Shikimori, друг ${i+1}">
+      <label class="inc"><input type="checkbox" data-inc="${i}" ${cfg.off.includes(whoOf(f)) ? '' : 'checked'} aria-label="Учитывать друга ${i+1}"></label>
+    </div>`).join('');
+}
+$('#friends').addEventListener('input', e => {
+  const t = e.target; if (t.dataset.i == null) return;
+  friends[t.dataset.i][t.dataset.k] = t.value; save();
+});
+$('#friends').addEventListener('change', e => {
+  const i = e.target.dataset.inc; if (i == null) return;
+  const w = whoOf(friends[i]); if (!w) return;
+  const st = new Set(cfg.off); if (e.target.checked) st.delete(w); else st.add(w);
+  cfg.off = [...st]; saveView(); if (data.size) draw();
+});
+
+// из ссылки на профиль берём только ник с конца
+function nickOf(v) {
+  v = String(v).trim();
+  if (!/^https?:\/\//i.test(v)) return v;
+  const seg = v.replace(/[?#].*$/, '').replace(/\/+$/, '').split('/').pop();
+  try { return decodeURIComponent(seg); } catch (e) { return seg; }
+}
+function whoOf(f) { return nickOf((f.al || '').trim() || (f.sh || '').trim()).replace(/\+/g, ' '); }
+function fkey(f) { return whoOf(f).toLowerCase(); }
+
+async function fromAniList(u) {
+  u = nickOf(u);
+  const q = `query($u:String){MediaListCollection(userName:$u,type:ANIME){lists{entries{score(format:POINT_10_DECIMAL) media{id idMal title{romaji english} coverImage{medium}}}}}}`;
+  const r = await fetch('https://graphql.anilist.co', {
+    method: 'POST',
+    headers: {'Content-Type':'application/json', Accept:'application/json'},
+    body: JSON.stringify({query: q, variables: {u}})
+  });
+  const j = await r.json();
+  if (j.errors) throw new Error(j.errors[0].message);
+  const m = new Map();
+  for (const l of j.data.MediaListCollection.lists)
+    for (const e of l.entries) {
+      if (!(e.score > 0)) continue;
+      const md = e.media;
+      m.set(md.idMal || 'a' + md.id, {s: e.score, en: md.title.english, ro: md.title.romaji, img: md.coverImage.medium});
+    }
+  return m;
+}
+
+const SHIKI_HOSTS = ['https://shikimori.io', 'https://shikimori.one', 'https://shikimori.me'];
+let shikiHost = SHIKI_HOSTS[0];
+
+async function shikiGet(path) {
+  // 1) напрямую, по очереди на каждом домене
+  for (const h of SHIKI_HOSTS) {
+    try {
+      const r = await fetch(h + path);
+      if (!r.ok) throw new Error('HTTP ' + r.status);
+      shikiHost = h;
+      return await r.json();
+    } catch (e) {
+      if (!(e instanceof TypeError)) throw e; // не сеть/CORS, а реальный ответ сервера
+    }
+  }
+  // 2) через прокси
+  const errs = new Set();
+  for (const h of SHIKI_HOSTS) for (const p of proxies()) {
+    try {
+      const r = await fetch(p(h + path));
+      if (!r.ok) throw new Error('HTTP ' + r.status);
+      shikiHost = h;
+      return await r.json();
+    } catch (x) { errs.add(x.message); }
+  }
+  throw new Error('CORS, прокси не помогли (' + [...errs].join(', ') + ')');
+}
+
+function proxies() {
+  const c = (cfg.proxy || '').trim();
+  return [
+    c && (u => c + encodeURIComponent(u)),
+    u => 'https://api.allorigins.win/raw?url=' + encodeURIComponent(u),
+    u => 'https://api.codetabs.com/v1/proxy/?quest=' + u,
+    u => 'https://corsproxy.io/?url=' + encodeURIComponent(u)
+  ].filter(Boolean);
+}
+
+async function fromShiki(u) {
+  const mm = u.match(/^https?:\/\/([^\/]+)\/([^\/?#]+)/);
+  if (mm) { // вставлена ссылка на профиль: берём ник и домен из неё
+    u = decodeURIComponent(mm[2]);
+    const h = 'https://' + mm[1];
+    if (!SHIKI_HOSTS.includes(h)) SHIKI_HOSTS.unshift(h);
+  }
+  u = u.replace(/ /g, '+'); // ники с пробелами Shikimori пишет через +
+  let id = u;
+  if (!/^\d+$/.test(u)) id = (await shikiGet(`/api/users/${encodeURIComponent(u)}?is_nickname=1`)).id;
+  const rates = await shikiGet(`/api/users/${id}/anime_rates?limit=5000&censored=false`);
+  const m = new Map();
+  for (const e of rates) {
+    if (!(e.score > 0)) continue;
+    const a = e.anime;
+    m.set(a.id, {s: e.score, ru: a.russian, ro: a.name, img: shikiHost + a.image.preview});
+  }
+  return m;
+}
+
+let data = new Map();
+
+let runId = 0;
+async function run() {
+  const my = ++runId; // если нажали «Посчитать» дважды, старый запуск не должен дописывать данные
+  const seen = new Set();
+  const fs = friends.filter(f => f.al.trim() || f.sh.trim()).filter(f => { const k = fkey(f); if (seen.has(k)) return false; seen.add(k); return true; });
+  if (!fs.length) { $('#status').textContent = 'Введите хотя бы один ник.'; return; }
+  $('#status').textContent = 'Загружаю…';
+  const D = new Map();
+  const notes = [];
+  await Promise.all(fs.map(async f => {
+    const al = f.al.trim(), sh = f.sh.trim(), who = whoOf(f);
+    let m, src;
+    if (al) {
+      try { m = await fromAniList(al); src = 'AniList'; }
+      catch (e) { notes.push(`<span class="err">${esc(who)}: AniList — ${esc(e.message)}</span>`); }
+    }
+    if (!m && sh) {
+      try { m = await fromShiki(sh); src = 'Shikimori'; }
+      catch (e) { notes.push(`<span class="err">${esc(who)}: Shikimori — ${esc(e.message)}</span>`); }
+    }
+    if (!m) return;
+    notes.push(`${esc(who)}: ${m.size} оценок (${src})`);
+    for (const [k0, v] of m) {
+      const k = String(k0);
+      let o = D.get(k);
+      if (!o) { o = {ru:'', en:'', ro:'', img:'', r:[]}; D.set(k, o); }
+      o.ru ||= v.ru || ''; o.en ||= v.en || ''; o.ro ||= v.ro || ''; o.img ||= v.img || '';
+      if (!o.r.some(x => x.who === who)) o.r.push({who, s: v.s}); // один человек — одна оценка
+    }
+  }));
+  if (my !== runId) return;
+  data = D;
+  $('#status').innerHTML = notes.join('<br>');
+  $('#ctl').hidden = false;
+  page = 0;
+  draw();
+}
+
+const pl = n => n % 10 === 1 && n % 100 !== 11 ? 'оценка' : (n % 10 >= 2 && n % 10 <= 4 && (n % 100 < 10 || n % 100 >= 20)) ? 'оценки' : 'оценок';
+const heat = v => `hsl(${Math.round((Math.max(1, Math.min(10, v)) - 1) / 9 * 150)} 65% 46%)`;
+
+const nameOf = o => ({ru: ['ru', 'ro', 'en'], ro: ['ro', 'en', 'ru'], en: ['en', 'ro', 'ru']}[cfg.names]).map(k => o[k]).filter(Boolean);
+const stats = r => {
+  const n = r.length, avg = r.reduce((a, x) => a + x.s, 0) / n;
+  return {n, avg, min: Math.min(...r.map(x => x.s)), sd: Math.sqrt(r.reduce((a, x) => a + (x.s - avg) ** 2, 0) / n)};
+};
+let mode = false, sel = new Map(), shown = new Map(), page = 0;
+
+const rOf = parts => {
+  const by = new Map();
+  for (const p of parts) for (const r of p.o.r) { if (!by.has(r.who)) by.set(r.who, []); by.get(r.who).push(r.s); }
+  return [...by].map(([who, a]) => ({who, s: a.reduce((x, y) => x + y, 0) / a.length}));
+};
+
+function buildItems() {
+  const items = [], memberOf = new Map(), trash = new Set(cfg.trash), tm = cfg.trashMode;
+  const off = new Set(cfg.off), D = new Map();
+  for (const [k, o] of data) { const r = o.r.filter(x => !off.has(x.who)); if (r.length) D.set(k, {...o, r}); }
+  const merged = cfg.view === 'fr';
+  const part = (k, o) => { const ns = nameOf(o); return {k, o, name: ns[0] || '', alt: ns.find(t => t !== ns[0]) || '', trash: trash.has('k:' + k), ...stats(o.r)}; };
+  for (const g of cfg.groups) for (const k of g.keys) { if (!memberOf.has(k)) memberOf.set(k, []); memberOf.get(k).push(g.name); }
+  if (merged) for (const g of cfg.groups) {
+    const all = g.keys.filter(k => D.has(k)).map(k => part(k, D.get(k)));
+    const gt = trash.has('g:' + g.id);
+    if (tm === 'out' && gt) continue;
+    if (tm === 'only' && !gt) continue;
+    const counted = tm === 'out' ? all.filter(p => !p.trash) : all; // «без шлака»: шлаковые части не входят в оценку франшизы
+    if (!counted.length) continue;
+    const r = rOf(counted), withT = all.some(p => p.trash) ? stats(rOf(all)) : null, withoutT = withT && all.some(p => !p.trash) ? stats(rOf(all.filter(p => !p.trash))) : null;
+    const main = counted.slice().sort((a, b) => b.n - a.n)[0];
+    items.push({id: 'g:' + g.id, g, parts: all, name: g.name, alt: '', img: main.o.img, r, trash: gt, withT, withoutT,
+      search: g.name + ' ' + all.map(p => [p.o.ru, p.o.en, p.o.ro].join(' ')).join(' '), ...stats(r)});
+  }
+  for (const [k, o] of D) {
+    if (merged && memberOf.has(k)) continue;
+    const p = part(k, o);
+    if (tm === 'out' && p.trash) continue;
+    if (tm === 'only' && !p.trash) continue;
+    items.push({id: 'k:' + k, k, name: p.name, alt: p.alt, img: o.img, r: o.r, search: [o.ru, o.en, o.ro].join(' '), trash: p.trash,
+      n: p.n, avg: p.avg, min: p.min, sd: p.sd, fr: merged ? [] : (memberOf.get(k) || [])});
+  }
+  return items;
+}
+
+const addSel = k => {
+  const gs = cfg.groups.filter(g => !g.keys.includes(k));
+  return EDIT && gs.length ? `<select data-addto="${esc(k)}" aria-label="Добавить во франшизу"><option value="">+ во франшизу</option>${gs.map(g => `<option value="${esc(g.id)}">${esc(g.name)}</option>`).join('')}</select>` : '';
+};
+
+function draw() {
+  const min = +$('#min').value || 1, q = $('#q').value.trim().toLowerCase(), sort = $('#sort').value, ps = +$('#psize').value || 100;
+  const items = buildItems().filter(x => x.n >= min && (!q || x.search.toLowerCase().includes(q)));
+  const by = {
+    avg: (a, b) => b.avg - a.avg || b.n - a.n,
+    worst: (a, b) => a.avg - b.avg || b.n - a.n,
+    low: (a, b) => a.min - b.min || a.avg - b.avg,
+    cnt: (a, b) => b.n - a.n || b.avg - a.avg,
+    spread: (a, b) => b.sd - a.sd || b.n - a.n,
+    name: (a, b) => a.name.localeCompare(b.name)
+  };
+  items.sort(by[sort] || by.avg);
+  const total = items.length, pages = Math.max(1, Math.ceil(total / ps));
+  page = Math.min(page, pages - 1);
+  const off = page * ps, slice = items.slice(off, off + ps);
+  shown = new Map(slice.map(x => [x.id, x]));
+  $('#list').innerHTML = total ? slice.map((x, i) => {
+    const chips = x.r.slice().sort((a, b) => b.s - a.s)
+      .map(r => `<span class="chip">${esc(r.who)}<b style="color:${heat(r.s)}">${+r.s.toFixed(1)}</b></span>`).join('');
+    const parts = x.parts ? `<div class="parts">${x.parts.map(p => `<div class="part${p.trash ? ' tr' : ''}"><span class="nm">${esc(p.name)}</span><span class="s">${p.avg.toFixed(2)} (${p.n})</span>${EDIT ? `<button type="button" data-trash="k:${esc(p.k)}" title="${p.trash ? 'Снять пометку' : 'Пометить эту часть шлаком'}">${p.trash ? 'не шлак' : 'шлак'}</button>${addSel(p.k)}<button type="button" data-leave="${esc(x.g.id)}" data-k="${esc(p.k)}" title="Убрать только из этой франшизы">из франшизы</button>` : ''}</div>`).join('')}</div>` : '';
+    const frs = x.fr && x.fr.length ? `<div class="hd" style="padding:0 12px 8px;margin:0">Франшизы: ${x.fr.map(esc).join(', ')}</div>` : '';
+    const tb = `<button type="button" data-trash="${esc(x.id)}">${x.trash ? 'Снять пометку «шлак»' : (x.g ? 'Пометить франшизу как шлак' : 'Пометить как шлак')}</button>`;
+    const act = EDIT ? tb + (x.g ? `<button type="button" data-ungroup="${esc(x.g.id)}">Разъединить франшизу</button>` : addSel(x.k)) : '';
+    const fsc = x.withT ? `<div class="fsc">Франшиза: с шлаком <b>${x.withT.avg.toFixed(2)}</b>${x.withoutT ? ` · без шлака <b>${x.withoutT.avg.toFixed(2)}</b>` : ' · без шлака нет частей'}${cfg.trashMode === 'out' ? ' (сейчас считается без шлака)' : ''}</div>` : '';
+    const pick = mode ? `<label class="pick"><input type="checkbox" data-pick="${esc(x.id)}" ${sel.has(x.id) ? 'checked' : ''} aria-label="Выбрать ${esc(x.name)}"></label>` : '';
+    return `<div class="item${mode ? ' pk' : ''}${x.trash ? ' tr' : ''}">${pick}<details><summary>
+      <div class="rk">${off + i + 1}</div>
+      <img loading="lazy" src="${esc(x.img)}" alt="">
+      <div class="t">${esc(x.name)}${x.trash ? '<span class="tag">шлак</span>' : ''}${x.alt ? `<small>${esc(x.alt)}</small>` : ''}</div>
+      <div class="sc"><b style="color:${heat(x.avg)}">${x.avg.toFixed(2)}</b><span>${x.n} ${pl(x.n)}</span></div>
+    </summary><div class="who">${chips}</div>${frs}${fsc}${parts}${act ? `<div class="acts2">${act}</div>` : ''}</details></div>`;
+  }).join('') : '<div class="empty">Ничего не нашлось. Уменьшите минимум оценок.</div>';
+  const pg = pages > 1 ? `<button type="button" data-page="${page - 1}" ${page ? '' : 'disabled'}>← Назад</button><span class="hd" style="margin:0">Страница ${page + 1} из ${pages} (${total})</span><button type="button" data-page="${page + 1}" ${page < pages - 1 ? '' : 'disabled'}>Дальше →</button>` : '';
+  $('#pg1').innerHTML = pg; $('#pg2').innerHTML = pg;
+}
+
+for (const id of ['#pg1', '#pg2']) $(id).addEventListener('click', e => {
+  const b = e.target.closest('button[data-page]'); if (!b || b.disabled) return;
+  page = +b.dataset.page; draw();
+  $('#ctl').scrollIntoView();
+});
+
+function toggleTrash(id) {
+  const i = cfg.trash.indexOf(id);
+  if (i < 0) cfg.trash.push(id); else cfg.trash.splice(i, 1);
+  save(); draw();
+}
+
+$('#list').addEventListener('click', e => {
+  const b = e.target.closest('button'); if (!b) return;
+  if (b.dataset.trash != null) toggleTrash(b.dataset.trash);
+  else if (b.dataset.ungroup != null) { cfg.groups = cfg.groups.filter(g => g.id !== b.dataset.ungroup); save(); draw(); }
+  else if (b.dataset.leave != null) {
+    const g = cfg.groups.find(x => x.id === b.dataset.leave);
+    if (g) { g.keys = g.keys.filter(k => k !== b.dataset.k); if (!g.keys.length) cfg.groups = cfg.groups.filter(x => x !== g); }
+    save(); draw();
+  }
+});
+$('#list').addEventListener('change', e => {
+  if (e.target.dataset.addto != null) {
+    const g = cfg.groups.find(x => x.id === e.target.value);
+    if (g && !g.keys.includes(e.target.dataset.addto)) g.keys.push(e.target.dataset.addto);
+    save(); draw(); return;
+  }
+  const id = e.target.dataset.pick; if (id == null) return;
+  if (e.target.checked) sel.set(id, shown.get(id)?.name || id); else sel.delete(id);
+  $('#mcount').textContent = sel.size;
+});
+$('#mtoggle').onclick = () => {
+  mode = !mode; sel.clear(); $('#mcount').textContent = 0; $('#mmsg').textContent = '';
+  $('#mbar').hidden = !mode;
+  $('#mtoggle').textContent = mode ? 'Закончить объединение' : 'Объединить франшизу';
+  draw();
+};
+$('#mdo').onclick = () => {
+  if (sel.size < 2) { $('#mmsg').textContent = 'Отметьте минимум две части.'; return; }
+  const ids = [...sel.keys()], keys = new Set();
+  const name = $('#mname').value.trim() || sel.get(ids[0]);
+  for (const id of ids) {
+    if (id.startsWith('g:')) {
+      const g = cfg.groups.find(x => 'g:' + x.id === id);
+      if (g) { g.keys.forEach(k => keys.add(k)); if (!$('#mkeep').checked) cfg.groups = cfg.groups.filter(x => x !== g); }
+    } else keys.add(id.slice(2));
+  }
+  cfg.groups.push({id: Date.now().toString(36), name, keys: [...keys]});
+  sel.clear(); $('#mname').value = ''; $('#mcount').textContent = 0;
+  $('#mmsg').textContent = `Готово: «${name}» теперь одна франшиза.`;
+  save(); draw();
+};
+
+$('#names').value = cfg.names;
+$('#sort').value = cfg.sort; if (!$('#sort').value) $('#sort').value = 'avg';
+$('#psize').value = cfg.psize; if (!$('#psize').value) $('#psize').value = '100';
+$('#view').value = cfg.view; $('#trash').value = cfg.trashMode;
+$('#view').addEventListener('input', () => { cfg.view = $('#view').value; sel.clear(); $('#mcount').textContent = 0; });
+$('#names').addEventListener('input', () => { cfg.names = $('#names').value; });
+$('#trash').addEventListener('input', () => { cfg.trashMode = $('#trash').value; });
+$('#go').onclick = run;
+['q', 'min', 'sort', 'psize', 'view', 'names', 'trash'].forEach(id => $('#' + id).addEventListener('input', () => { page = 0; saveView(); draw(); }));
+drawFriends();
+</script>
+</body>
+</html>
