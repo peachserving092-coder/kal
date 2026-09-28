@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Что думают друзья</title>
+<title>кал</title>
 <style>
 :root{--bg:#eef0f6;--card:#fff;--ink:#1b2340;--mute:#6a7391;--line:#d9ddea;--acc:#3b5bfd}
 @media (prefers-color-scheme:dark){:root{--bg:#141829;--card:#1d2238;--ink:#e8ebf7;--mute:#8d96b8;--line:#2e3555;--acc:#7b93ff}}
@@ -76,7 +76,7 @@ summary img{width:48px;height:68px;object-fit:cover;border-radius:6px;background
 </section>
 
 <div id="ebar" class="panel" hidden style="margin-top:14px">
-  <div class="hd">Режим редактирования. Шлак, франшизы и список друзей хранятся у вас в браузере, пока вы не скачаете обновлённый файл и не выложите его вместо старого — тогда их увидят все.</div>
+  <div class="hd" id="ebtext"></div>
   <div class="acts">
     <button id="dl" type="button" class="main-btn">Скачать обновлённый файл</button>
     <button id="reset" type="button">Сбросить мои правки</button>
@@ -100,7 +100,6 @@ summary img{width:48px;height:68px;object-fit:cover;border-radius:6px;background
     <select id="sort">
       <option value="avg">Средняя оценка (сначала лучшие)</option>
       <option value="worst">Средняя оценка (сначала худшие)</option>
-      <option value="low">Самая низкая оценка друга</option>
       <option value="cnt">Число оценок</option>
       <option value="spread">Споры (разброс)</option>
       <option value="name">Название</option>
@@ -136,6 +135,7 @@ summary img{width:48px;height:68px;object-fit:cover;border-radius:6px;background
 <div id="pg1" class="pager"></div>
 <div id="list"></div>
 <div id="pg2" class="pager"></div>
+<p class="hd" style="text-align:center;margin-top:24px"><a href="#" id="login" hidden style="color:var(--acc)">Вход для редактора</a> <span id="who"></span></p>
 </main>
 
 <script id="saved" type="application/json">{"friends": [{"al": "Coffa", "sh": ""}, {"al": "", "sh": "https://shikimori.io/Toxexex"}, {"al": "PesKoshachy", "sh": ""}, {"al": "Egortos", "sh": ""}, {"al": "Holdes", "sh": ""}, {"al": "", "sh": "https://shikimori.rip/DakuKun"}, {"al": "", "sh": "https://shikimori.io/skltn"}, {"al": "", "sh": "https://shikimori.io/Тим+Ховард"}], "proxy": "", "names": "ru", "trash": [], "groups": [], "view": "fr"}</script>
@@ -144,27 +144,100 @@ const $ = s => document.querySelector(s);
 const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 
 let friends = [], cfg = {proxy: '', names: 'ru', trash: [], groups: [], view: 'fr', off: [], sort: 'avg', psize: '100', trashMode: 'in'};
-const EDIT = location.hash === '#edit';
+// ---- Supabase: сюда вставьте Project URL и публичный ключ (anon / publishable) ----
+const SB_URL = '', SB_KEY = '';
+const SB = !!(SB_URL && SB_KEY);
+let EDIT = !SB, PASS = '', sharedEmpty = false, pushT;
+const sbBase = SB_URL.replace(/\/+$/, '') + '/rest/v1/';
+const sbH = () => { const h = {apikey: SB_KEY, 'Content-Type': 'application/json'}; if (SB_KEY.startsWith('eyJ')) h.Authorization = 'Bearer ' + SB_KEY; return h; };
+const sbRpc = (fn, body) => fetch(sbBase + 'rpc/' + fn, {method: 'POST', headers: sbH(), body: JSON.stringify(body)});
+const setWho = (m, err) => { $('#who').innerHTML = err ? `<span class="err">${esc(m)}</span>` : esc(m); };
+
+function localWork(F) { // то, что человек уже наделал у себя в браузере
+  let D = null; try { D = JSON.parse(localStorage.getItem('fr-draft')); } catch (e) {}
+  if (D) return D;
+  let L = null; try { L = JSON.parse(localStorage.getItem('fr-cfg')); } catch (e) {}
+  if (L && ((L.groups || []).length || (L.trash || []).length || (L.hidden || []).length))
+    return {friends: F.friends, proxy: F.proxy, groups: L.groups || [], trash: (L.trash || []).concat((L.hidden || []).map(h => 'k:' + h.k))};
+  return null;
+}
+
 (function loadCfg() {
   let F = null, V = null, D = null;
   try { F = JSON.parse($('#saved').textContent); } catch (e) {}
   try { V = JSON.parse(localStorage.getItem('fr-view')); } catch (e) {}
   F = F || {}; V = V || {};
-  if (EDIT) {
-    try { D = JSON.parse(localStorage.getItem('fr-draft')); } catch (e) {}
-    if (!D) { // подхватываем то, что было наделано в старой версии страницы
-      let L = null; try { L = JSON.parse(localStorage.getItem('fr-cfg')); } catch (e) {}
-      if (L && ((L.groups || []).length || (L.trash || []).length || (L.hidden || []).length))
-        D = {friends: F.friends, proxy: F.proxy, groups: L.groups || [], trash: (L.trash || []).concat((L.hidden || []).map(h => 'k:' + h.k))};
-    }
-  }
-  const S = D || F; // у обычных посетителей источник один — сам файл
+  if (!SB) D = localWork(F);
+  const S = D || F;
   friends = (S.friends || []).map(f => ({al: f.al || '', sh: f.sh || ''}));
   cfg.trash = [...(S.trash || [])]; cfg.groups = (S.groups || []).map(g => ({...g, keys: [...g.keys]})); cfg.proxy = S.proxy || '';
   cfg.names = V.names || F.names || 'ru'; cfg.view = V.view || F.view || 'fr';
   cfg.off = V.off || []; cfg.sort = V.sort || 'avg'; cfg.psize = V.psize || '100'; cfg.trashMode = V.trashMode || 'in';
   if (!friends.length) friends = [{al:'', sh:''}, {al:'', sh:''}];
 })();
+
+// общие шлак и франшизы из Supabase (видят все)
+const sharedP = !SB ? Promise.resolve() : (async () => {
+  try {
+    const r = await fetch(sbBase + 'config?id=eq.1&select=data', {headers: sbH(), cache: 'no-store'});
+    if (!r.ok) throw new Error('HTTP ' + r.status);
+    const d = ((await r.json())[0] || {}).data || {};
+    if (Array.isArray(d.trash) || Array.isArray(d.groups)) { cfg.trash = d.trash || []; cfg.groups = d.groups || []; }
+    else sharedEmpty = true;
+    if (typeof data !== 'undefined' && data.size) draw();
+  } catch (e) { setWho('Не удалось загрузить общие данные: ' + e.message, true); }
+})();
+
+async function checkPass(pw) {
+  try {
+    const r = await sbRpc('check_pass', {p_pass: pw});
+    if (!r.ok) throw new Error('HTTP ' + r.status);
+    return (await r.json()) === true;
+  } catch (e) { setWho('Не удалось проверить пароль: ' + e.message, true); return false; }
+}
+
+async function pushShared() {
+  try {
+    const r = await sbRpc('save_config', {p_pass: PASS, p_data: {trash: cfg.trash, groups: cfg.groups}});
+    if (!r.ok) throw new Error(r.status === 400 ? 'неверный пароль или ошибка базы' : 'HTTP ' + r.status);
+    $('#emsg').textContent = 'Сохранено для всех ✓';
+  } catch (e) { $('#emsg').innerHTML = `<span class="err">Не удалось сохранить: ${esc(e.message)}</span>`; }
+}
+
+function applyEdit() {
+  $('#ebar').hidden = !EDIT; $('#mtoggle').hidden = !EDIT;
+  $('#dl').hidden = SB; $('#reset').hidden = SB;
+  $('#ebtext').textContent = SB ? 'Вы вошли как редактор: всё, что вы отмечаете, сразу сохраняется для всех.'
+    : 'Шлак и франшизы, которые вы отметили, пока видны только вам (хранятся в этом браузере). Чтобы их увидели все, скачайте обновлённый файл и загрузите его в репозиторий вместо старого.';
+  const l = $('#login'); l.hidden = !SB; l.textContent = EDIT ? 'Выйти из режима редактора' : 'Вход для редактора';
+  if (!EDIT && mode) { mode = false; $('#mbar').hidden = true; $('#mtoggle').textContent = 'Объединить франшизу'; }
+  if (data.size) draw();
+}
+
+async function enterEdit(pw) {
+  PASS = pw; EDIT = true;
+  try { localStorage.setItem('fr-pass', pw); } catch (e) {}
+  await sharedP;
+  if (sharedEmpty) {
+    const D = localWork({});
+    if (D && confirm('В общей базе пока пусто, а у вас в браузере есть свои шлак и франшизы. Перенести их в общую базу?')) {
+      cfg.trash = D.trash || []; cfg.groups = D.groups || []; sharedEmpty = false; pushShared();
+    }
+  }
+  applyEdit();
+}
+
+$('#login').onclick = async e => {
+  e.preventDefault();
+  if (EDIT) { try { localStorage.removeItem('fr-pass'); } catch (x) {} PASS = ''; EDIT = false; applyEdit(); setWho(''); return; }
+  const pw = prompt('Пароль редактора'); if (!pw) return;
+  if (await checkPass(pw)) { setWho(''); enterEdit(pw); } else if (!$('#who').textContent) setWho('Неверный пароль', true);
+};
+if (SB) sharedP.then(async () => {
+  let pw = ''; try { pw = localStorage.getItem('fr-pass') || ''; } catch (e) {}
+  if (!pw) return;
+  if (await checkPass(pw)) enterEdit(pw); else try { localStorage.removeItem('fr-pass'); } catch (e) {}
+});
 
 const snapshot = () => JSON.stringify({friends: friends.filter(f => f.al.trim() || f.sh.trim()), proxy: cfg.proxy, trash: cfg.trash, groups: cfg.groups});
 
@@ -173,7 +246,7 @@ function saveView() {
 }
 
 function save() {
-  if (!EDIT) return; // посетители ничего не сохраняют: общие данные берутся из файла
+  if (SB) { if (EDIT) { clearTimeout(pushT); pushT = setTimeout(pushShared, 500); $('#emsg').textContent = 'Сохраняю…'; } return; }
   try { localStorage.setItem('fr-draft', snapshot()); } catch (e) {}
 }
 
@@ -199,7 +272,6 @@ $('#reset').onclick = () => {
   try { localStorage.removeItem('fr-draft'); } catch (e) {}
   location.reload();
 };
-if (EDIT) $('#ebar').hidden = false; else $('#mtoggle').hidden = true;
 
 function drawFriends() {
   $('#friends').innerHTML = friends.map((f, i) => `
@@ -317,6 +389,7 @@ async function run() {
   const fs = friends.filter(f => f.al.trim() || f.sh.trim()).filter(f => { const k = fkey(f); if (seen.has(k)) return false; seen.add(k); return true; });
   if (!fs.length) { $('#status').textContent = 'Введите хотя бы один ник.'; return; }
   $('#status').textContent = 'Загружаю…';
+  await sharedP;
   const D = new Map();
   const notes = [];
   await Promise.all(fs.map(async f => {
@@ -499,6 +572,7 @@ $('#trash').addEventListener('input', () => { cfg.trashMode = $('#trash').value;
 $('#go').onclick = run;
 ['q', 'min', 'sort', 'psize', 'view', 'names', 'trash'].forEach(id => $('#' + id).addEventListener('input', () => { page = 0; saveView(); draw(); }));
 drawFriends();
+applyEdit();
 </script>
 </body>
 </html>
