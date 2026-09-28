@@ -77,10 +77,6 @@ summary img{width:48px;height:68px;object-fit:cover;border-radius:6px;background
 
 <div id="ebar" class="panel" hidden style="margin-top:14px">
   <div class="hd" id="ebtext"></div>
-  <div class="acts">
-    <button id="dl" type="button" class="main-btn">Скачать обновлённый файл</button>
-    <button id="reset" type="button">Сбросить мои правки</button>
-  </div>
   <div id="emsg" class="hd" style="margin-top:6px"></div>
 </div>
 
@@ -205,10 +201,8 @@ async function pushShared() {
 }
 
 function applyEdit() {
-  $('#ebar').hidden = !EDIT; $('#mtoggle').hidden = !EDIT;
-  $('#dl').hidden = SB; $('#reset').hidden = SB;
-  $('#ebtext').textContent = SB ? 'Вы вошли как редактор: всё, что вы отмечаете, сразу сохраняется для всех.'
-    : 'Шлак и франшизы, которые вы отметили, пока видны только вам (хранятся в этом браузере). Чтобы их увидели все, скачайте обновлённый файл и загрузите его в репозиторий вместо старого.';
+  $('#ebar').hidden = !(SB && EDIT); $('#mtoggle').hidden = !EDIT;
+  $('#ebtext').textContent = 'Вы вошли как редактор: всё, что вы отмечаете, сразу сохраняется для всех.';
   const l = $('#login'); l.hidden = !SB; l.textContent = EDIT ? 'Выйти из режима редактора' : 'Вход для редактора';
   if (!EDIT && mode) { mode = false; $('#mbar').hidden = true; $('#mtoggle').textContent = 'Объединить франшизу'; }
   if (data.size) draw();
@@ -249,29 +243,6 @@ function save() {
   if (SB) { if (EDIT) { clearTimeout(pushT); pushT = setTimeout(pushShared, 500); $('#emsg').textContent = 'Сохраняю…'; } return; }
   try { localStorage.setItem('fr-draft', snapshot()); } catch (e) {}
 }
-
-$('#dl').onclick = async () => {
-  const j = snapshot().replace(/</g, '\\u003c'), re = /(<script id="saved" type="application\/json">)[\s\S]*?(<\/script>)/, msg = $('#emsg');
-  try {
-    const r = await fetch(location.href.split('#')[0], {cache: 'no-store'});
-    if (!r.ok) throw new Error('HTTP ' + r.status);
-    const txt = await r.text();
-    if (!re.test(txt)) throw new Error('нет блока данных');
-    const a = document.createElement('a');
-    a.href = URL.createObjectURL(new Blob([txt.replace(re, (_, x, y) => x + j + y)], {type: 'text/html'}));
-    a.download = decodeURIComponent(location.pathname.split('/').pop()) || 'index.html';
-    document.body.appendChild(a); a.click(); a.remove();
-    msg.textContent = 'Файл скачан. Замените им старый файл в репозитории и закоммитьте.';
-  } catch (e) { // страница открыта с диска: браузер не даёт прочитать собственный файл
-    try { await navigator.clipboard.writeText(j); msg.textContent = 'Файл с диска прочитать нельзя, поэтому данные скопированы в буфер. Откройте файл в редакторе и замените ими содержимое блока с id="saved" (там лежит JSON). Проще открыть страницу с сайта и нажать кнопку там.'; }
-    catch (e2) { msg.textContent = 'Не получилось скачать: ' + e.message; }
-  }
-};
-$('#reset').onclick = () => {
-  if (!confirm('Сбросить все правки в этом браузере и вернуть данные из файла?')) return;
-  try { localStorage.removeItem('fr-draft'); } catch (e) {}
-  location.reload();
-};
 
 function drawFriends() {
   $('#friends').innerHTML = friends.map((f, i) => `
